@@ -1,0 +1,3 @@
+[submodule "meetup"]
+	path = meetup
+	url = git@github.com:omwah/python-api-client.git

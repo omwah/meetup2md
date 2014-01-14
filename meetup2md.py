@@ -10,10 +10,14 @@
 """
 
 from argparse import ArgumentParser
+from html2text import html2text
+from datetime import datetime
+
 import webbrowser
-import html2text
 import logging
 import sys
+import os
+import re
 
 import ConfigParser
 
@@ -56,17 +60,18 @@ def get_interface(config, args):
         if len(args) is 2:
             consumer_key, consumer_secret = args
             set_token(config, 'consumer', consumer_key, consumer_secret)
-        else: option.error('please pass in consumer-key and consumer-secret')
+        else: 
+            sys.exit('please pass in consumer-key and consumer-secret')
 
     mucli = get_client(config)
     
     def access_granted():
-        print """\
+        logging.debug("""\
     access-key:     %s
     access-secret:  %s
     
     Congratulations, you've got an access token! Try it out in an interpreter.
-              """ % get_token(config, 'access')
+              """ % get_token(config, 'access'))
 
     if config.has_section('access'):
         access_granted()
@@ -89,33 +94,158 @@ def get_interface(config, args):
                 url = oauth_session.get_authenticate_url()
             else:
                 url = oauth_session.get_authorize_url()
-            print "Opening a browser on the authorization page: %s" % url
+            logger.info("Opening a browser on the authorization page: %s" % url)
             webbrowser.open(url)
     
     return mucli
 
+def get_option(option_name, config, args, config_section='events', default=None):
+    if hasattr(args, option_name) and getattr(args, option_name):
+        return getattr(args, option_name)
+    elif config.has_option(config_section, option_name):
+        return config.get(config_section, option_name)
+    else:
+        return default
+
+def event_datetime(event):
+    return datetime.fromtimestamp(event.time/1000)
+
+def event_oneline_venue(event):
+    v = event.venue
+    vlist = [ v['name'] ] 
+    for acount in range(1,4):
+        aname = 'address_%d' % acount
+        if v.has_key(aname):
+            vlist.append(v[aname])
+    for opt_item in ['city', 'state', 'zip']:
+        if not v.has_key(opt_item):
+            break
+        vlist.append(v[opt_item])
+    return ', '.join(vlist)
+
+def print_event_summary(event):
+    dt = event_datetime(event)
+    print 'Name:', event.name
+    print 'Title:', event.title
+    print 'Time:', dt.strftime('%A %B %d, %Y %I:%M %p')
+    print 'Venue:', event_oneline_venue(event)
+
+def get_title(event, title_cleanup=None):
+    title = event.name
+    if title_cleanup:
+        title = re.sub(title_cleanup, '', title).strip()
+    return title
+
+def get_clean_description(event):
+    text = html2text(event.description)
+
+    # Convert bullet unicode symbols to asterisks
+    text = text.replace(u'\u2022', '*')
+    # Convert no-break space to space
+    text = text.replace(u'\xA0', ' ')
+
+    return text
+
+def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M'):
+    print >>stream, 'Title: %s' % event.title
+    print >>stream, 'Date: %s' % datetime.now().strftime(datetime_format)
+    print >>stream, 'event_date: %s' % event_datetime(event).strftime(datetime_format)
+    print >>stream, 'event_location: %s' % event_oneline_venue(event)
+    print >>stream, 'event_updated: %d' % event.updated
+    print >>stream, ''
+    print >>stream, get_clean_description(event)
+
+def event_output_filename(event, output_dir):
+    dt = event_datetime(event)
+    output_fn = dt.strftime('%Y-%m-%d') + '-%s' % (event.title.strip().replace(' ', '-').lower()) + '.md'
+    return os.path.join(output_dir, output_fn).encode()
+
+def process_event(event, output_dir=None, overwrite=False, title_cleanup=None):
+    event.title = get_title(event, title_cleanup)
+
+    print_event_summary(event)
+
+    if output_dir:
+        output_fn = event_output_filename(event, output_dir)
+        print ' -> %s' % output_fn
+        if not os.path.exists(output_fn) or overwrite:
+            with open(output_fn, 'w') as out_obj:
+                write_event_page(event, out_obj)
+        else:
+            logging.error('will not overwrite existing file: %s' % output_fn)
+
+    print '----'
+
 if __name__ == '__main__':
     parser = ArgumentParser(description='Downloads meetup events into text/markdown format for use in static web blogs')
+
     parser.add_argument('--config', dest='config', 
         help='read & write settings to CONFIG, default is app.cfg')
+
+    # The values here get writtent to the config file
     parser.add_argument('--verifier', dest='verifier', 
         help='oauth_callback for request-token request, defaults to oob')
     parser.add_argument('--callback', dest='callback', default='oob',
         help='oauth_verifier, required to gain access token')
     parser.add_argument('--authenticate', dest='authenticate', action='store_true',
         help='pass in to use authentication end point')
+
+    # These options also can be specified in the config file events section
+    parser.add_argument('-g', '--group-name', dest='group_name',
+        help='group_urlname of the group to retrieve events from')
+    parser.add_argument('-f', '--name-filter', dest='name_filter', 
+        help='filter out events that match the supplied regular expression')
+    parser.add_argument('-t', '--time-range', dest='time_range',
+        help='return events scheduled within the given time range, defined by two times separated with a single comma.')
+    parser.add_argument('-s', '--status', dest='event_status',
+        help='status may be "upcoming", "past", "proposed", "suggested", "cancelled", "draft" or multiple separated by a comma.')
+    parser.add_argument('-c', '--cleanup', dest='title_cleanup', 
+        help='removes text matching the supplied regular expression from the title')
+
+    parser.add_argument('-o', '--output-dir', dest='output_dir',
+        help='directory where to output posts, otherwise only a summary is shown')
+    parser.add_argument('--overwrite', dest='overwrite', action='store_true',
+        help='overwrite existing files')
+
+    parser.add_argument('-v', '-verbose', dest='verbose', action='store_true',
+        help='enable verbose debugging')
+
     args = parser.parse_args()
-    
-    logging.basicConfig(level=logging.DEBUG)
+   
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
     
     config_name, config = get_config(args.config)
    
+    # Do the work of logging in and passing through tokens to get the interface
     mucli = get_interface(config, args)
+
+    # Add a config section for configuring event retrieval if not already existing
+    if not config.has_section('events'):
+        config.add_section('events')
     
+    # Write config with any changes modifications made so far
     with open(config_name, 'wb') as c:
         config.write(c)
 
-    events = mucli.get_events(group_urlname="SGVTech")
+    # Make sure output_dir exists if defined
+    if args.output_dir and not os.path.exists(args.output_dir):
+        parser.error('output directory must already exist')
 
-    import IPython
-    IPython.embed()
+    group_name = get_option('group_name', config, args)
+    if not group_name:
+        parser.error('Must specify name of group to retireve from')
+
+    name_filter = get_option('name_filter', config, args, default='')
+    time_range = get_option('time_range', config, args, default='0,1m')
+    event_status = get_option('event_status', config, args, default='upcoming')
+    title_cleanup = get_option('title_cleanup', config, args)
+    output_dir = get_option('output_dir', config, args)
+
+    events = mucli.get_events(group_urlname=group_name, time=time_range, status=event_status)
+
+    for event in events.results:
+        if re.search(name_filter, event.name):
+            process_event(event, output_dir=output_dir, overwrite=args.overwrite, title_cleanup=title_cleanup)

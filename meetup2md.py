@@ -57,11 +57,14 @@ def set_token(config, name, key, secret):
 
 def get_interface(config, args):
     if not config.has_section('consumer'):
-        if len(args) is 2:
-            consumer_key, consumer_secret = args
+        if args.consumer and len(args.consumer) is 2:
+            consumer_key, consumer_secret = args.consumer
             set_token(config, 'consumer', consumer_key, consumer_secret)
         else: 
-            sys.exit('please pass in consumer-key and consumer-secret')
+            print >>sys.stderr, 'Please pass in consumer-key and consumer-secret with --consumer option'
+            print >>sys.stderr, 'Set up a key and secret here:'
+            print >>sys.stderr, 'https://secure.meetup.com/meetup_api/oauth_consumers/'
+            sys.exit()
 
     mucli = get_client(config)
     
@@ -84,18 +87,17 @@ def get_interface(config, args):
             print "    member_id:      %s" % oauth_session.fetch_access_token(args.verifier)
             set_token(config, 'access', oauth_session.access_token.key, oauth_session.access_token.secret)
             access_granted()
+            return None
         else:
             oauth_session = mucli.new_session()
-            oauth_session.fetch_request_token(callback=args.callback)
+            oauth_session.fetch_request_token()
         
             set_token(config, 'request', oauth_session.request_token.key, oauth_session.request_token.secret)
 
-            if (args.authenticate):
-                url = oauth_session.get_authenticate_url()
-            else:
-                url = oauth_session.get_authorize_url()
-            logger.info("Opening a browser on the authorization page: %s" % url)
+            url = oauth_session.get_authorize_url()
+            logging.info("Opening a browser on the authorization page: %s" % url)
             webbrowser.open(url)
+            return None
     
     return mucli
 
@@ -183,12 +185,10 @@ if __name__ == '__main__':
         help='read & write settings to CONFIG, default is app.cfg')
 
     # The values here get writtent to the config file
+    parser.add_argument('--consumer', dest='consumer', nargs=2,
+        help='set the consumer key and secret')
     parser.add_argument('--verifier', dest='verifier', 
-        help='oauth_callback for request-token request, defaults to oob')
-    parser.add_argument('--callback', dest='callback', default='oob',
-        help='oauth_verifier, required to gain access token')
-    parser.add_argument('--authenticate', dest='authenticate', action='store_true',
-        help='pass in to use authentication end point')
+        help='verify authorization with code from browser')
 
     # These options also can be specified in the config file events section
     parser.add_argument('-g', '--group-name', dest='group_name',
@@ -229,6 +229,10 @@ if __name__ == '__main__':
     # Write config with any changes modifications made so far
     with open(config_name, 'wb') as c:
         config.write(c)
+
+    # We have not yet finished setting up keys
+    if not mucli:
+        sys.exit()
 
     # Make sure output_dir exists if defined
     if args.output_dir and not os.path.exists(args.output_dir):

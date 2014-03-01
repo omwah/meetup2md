@@ -159,9 +159,12 @@ def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M'):
     print >>stream, ''
     print >>stream, get_clean_description(event)
 
+def slugify(title):
+    return re.sub('[^-a-z0-9]', '', re.sub('[\s]+', '-', title.lower().strip()))
+
 def event_output_filename(event, output_dir):
     dt = event_datetime(event)
-    output_fn = dt.strftime('%Y-%m-%d') + '-%s' % (event.title.strip().replace(' ', '-').lower()) + '.md'
+    output_fn = dt.strftime('%Y-%m-%d') + '-%s' % slugify(event.title) + '.md'
     return os.path.join(output_dir, output_fn).encode()
 
 def process_event(event, output_dir=None, overwrite=False, title_cleanup=None):

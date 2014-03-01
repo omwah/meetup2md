@@ -7,7 +7,7 @@ meetup2md is a simple script that downloads events from a Meetup.com group and o
 Installing
 ==========
 
-This project uses git submodules. You may need to change the submodule url to suit your needs. For example, to use https rather than ssh, modify the .gitmodule url *before* executing the submodule commands below to https://github.com/omwah/python-api-client.git.
+This project uses git submodules. The modules will need to be initialized and pulled after cloning this repository.
 
 .. sourcecode:: shell-session
 

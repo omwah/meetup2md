@@ -26,18 +26,20 @@ from meetup import meetup_api_client as mac
 def config_client(config_name=None):
     return get_client(get_config(config_name)[1])
 
-def get_config(name=None):
-    name = name or 'app.cfg'
+def get_config(filename=None):
+    # Use a config in the user's home directory if one is not
+    # specified on the command line
+    filename = filename or os.path.join(os.path.expanduser("~"), '.meetup2md.cfg')
 
     config = ConfigParser.ConfigParser()
     config.optionxform = str
-    config.read(name)
+    config.read(filename)
     
     if config.has_section('internal'):
         # you probably don't need to worry about this!
         mac.__dict__.update(config.items('internal'))
 
-    return name, config
+    return filename, config
     
 def get_client(config):
     consumer_key, consumer_secret = get_token(config, 'consumer')

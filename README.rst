@@ -69,7 +69,9 @@ Actually save the posts instead of just seeing a summary of the events. Director
 Configuring
 ===========
 
-Edit the [events] section of app.cfg using the long names of the various arguments supplied on the command line:
+If no config filename is specified on the command line with the --config option then meetup2md will look for a config at: $HOME/.meetup2md.cfg.
+
+Edit the [events] section of the config using the long names of the various arguments supplied on the command line:
 
 .. sourcecode:: shell-session
 

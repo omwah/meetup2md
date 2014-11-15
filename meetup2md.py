@@ -141,7 +141,7 @@ def get_title(event, title_cleanup=None):
     return title
 
 def get_clean_description(event):
-    text = html2text(event.description)
+    text = html2text(event.description).rstrip()
 
     # Convert bullet unicode symbols to asterisks
     text = text.replace(u'\u2022', '*')
@@ -156,7 +156,7 @@ def get_clean_description(event):
 
     return text
 
-def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M'):
+def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M', logo_filename=None):
     print >>stream, 'Title: %s' % event.title
     print >>stream, 'Date: %s' % datetime.now().strftime(datetime_format)
     print >>stream, 'event_date: %s' % event_datetime(event).strftime(datetime_format)
@@ -164,6 +164,10 @@ def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M'):
     print >>stream, 'event_updated: %d' % event.updated
     print >>stream, ''
     print >>stream, get_clean_description(event)
+    if logo_filename != None:
+        print >>stream, '\n[ ![Meetup Event Page]({{filename}}{logo_filename}) ]({event_url})'.format(logo_filename=logo_filename, event_url=event.event_url)
+    else:
+        print >>stream, '\n[Meetup Event Page]({event_url})'.format(logo_filename=logo_filename, event_url=event.event_url)
 
 def slugify(title):
     return re.sub('[^-a-z0-9]', '', re.sub('[\s]+', '-', title.lower().strip()))
@@ -173,7 +177,7 @@ def event_output_filename(event, output_dir):
     output_fn = dt.strftime('%Y-%m-%d') + '-%s' % slugify(event.title) + '.md'
     return os.path.join(output_dir, output_fn).encode()
 
-def process_event(event, output_dir=None, overwrite=False, title_cleanup=None):
+def process_event(event, output_dir=None, overwrite=False, title_cleanup=None, logo_filename=None):
     event.title = get_title(event, title_cleanup)
 
     print_event_summary(event)
@@ -183,7 +187,7 @@ def process_event(event, output_dir=None, overwrite=False, title_cleanup=None):
         print ' -> %s' % output_fn
         if not os.path.exists(output_fn) or overwrite:
             with open(output_fn, 'w') as out_obj:
-                write_event_page(event, out_obj)
+                write_event_page(event, out_obj, logo_filename=logo_filename)
         else:
             logging.error('will not overwrite existing file: %s' % output_fn)
 
@@ -217,6 +221,9 @@ if __name__ == '__main__':
         help='directory where to output posts, otherwise only a summary is shown')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true',
         help='overwrite existing files')
+
+    parser.add_argument('--logo', dest='logo_filename',
+        help='filename relative blog base directory for a Meetup.com logo to use to linke to the Meetup page for an event')
 
     parser.add_argument('-v', '-verbose', dest='verbose', action='store_true',
         help='enable verbose debugging')
@@ -258,9 +265,10 @@ if __name__ == '__main__':
     event_status = get_option('event_status', config, args, default='upcoming')
     title_cleanup = get_option('title_cleanup', config, args)
     output_dir = get_option('output_dir', config, args)
+    logo_filename = get_option('logo_filename', config, args)
 
     events = mucli.get_events(group_urlname=group_name, time=time_range, status=event_status)
 
     for event in events.results:
         if re.search(name_filter, event.name):
-            process_event(event, output_dir=output_dir, overwrite=args.overwrite, title_cleanup=title_cleanup)
+            process_event(event, output_dir=output_dir, overwrite=args.overwrite, title_cleanup=title_cleanup, logo_filename=logo_filename)

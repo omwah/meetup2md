@@ -148,6 +148,12 @@ def get_clean_description(event):
     # Convert no-break space to space
     text = text.replace(u'\xA0', ' ')
 
+    # Make this a dash
+    text = text.replace(u'\u2014', '-')
+
+    # Convert elipses to three periods
+    text = text.replace(u'\u2026', '...')
+
     return text
 
 def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M'):

@@ -158,7 +158,8 @@ def get_clean_description(event):
 
 def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M', logo_filename=None):
     print >>stream, 'Title: %s' % event.title
-    print >>stream, 'Date: %s' % datetime.now().strftime(datetime_format)
+    print >>stream, 'Date: %s' % event_datetime(event).strftime(datetime_format)
+    print >>stream, 'published: %s' % datetime.now().strftime(datetime_format)
     print >>stream, 'event_date: %s' % event_datetime(event).strftime(datetime_format)
     print >>stream, 'event_location: %s' % event_oneline_venue(event)
     print >>stream, 'event_updated: %d' % event.updated

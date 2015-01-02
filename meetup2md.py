@@ -4,7 +4,7 @@
     Downloads meetup event(s) into markdown format which can be used by a
     static web generator such as Pelican.
 
-    Obtains an access token for the given consumer credentials. The 
+    Obtains an access token for the given consumer credentials. The
     authorized application will appear on this page:
     http://www.meetup.com/account/oauth_apps/
 """
@@ -34,13 +34,13 @@ def get_config(filename=None):
     config = ConfigParser.ConfigParser()
     config.optionxform = str
     config.read(filename)
-    
+
     if config.has_section('internal'):
         # you probably don't need to worry about this!
         mac.__dict__.update(config.items('internal'))
 
     return filename, config
-    
+
 def get_client(config):
     consumer_key, consumer_secret = get_token(config, 'consumer')
     if config.has_section('access'):
@@ -62,19 +62,19 @@ def get_interface(config, args):
         if args.consumer and len(args.consumer) is 2:
             consumer_key, consumer_secret = args.consumer
             set_token(config, 'consumer', consumer_key, consumer_secret)
-        else: 
+        else:
             print >>sys.stderr, 'Please pass in consumer-key and consumer-secret with --consumer option'
             print >>sys.stderr, 'Set up a key and secret here:'
             print >>sys.stderr, 'https://secure.meetup.com/meetup_api/oauth_consumers/'
             sys.exit()
 
     mucli = get_client(config)
-    
+
     def access_granted():
         logging.debug("""\
     access-key:     %s
     access-secret:  %s
-    
+
     Congratulations, you've got an access token! Try it out in an interpreter.
               """ % get_token(config, 'access'))
 
@@ -93,14 +93,14 @@ def get_interface(config, args):
         else:
             oauth_session = mucli.new_session()
             oauth_session.fetch_request_token()
-        
+
             set_token(config, 'request', oauth_session.request_token.key, oauth_session.request_token.secret)
 
             url = oauth_session.get_authorize_url()
             logging.info("Opening a browser on the authorization page: %s" % url)
             webbrowser.open(url)
             return None
-    
+
     return mucli
 
 def get_option(option_name, config, args, config_section='events', default=None):
@@ -116,7 +116,7 @@ def event_datetime(event):
 
 def event_oneline_venue(event):
     v = event.venue
-    vlist = [ v['name'] ] 
+    vlist = [ v['name'] ]
     for acount in range(1,4):
         aname = 'address_%d' % acount
         if v.has_key(aname):
@@ -197,25 +197,25 @@ def process_event(event, output_dir=None, overwrite=False, title_cleanup=None, l
 if __name__ == '__main__':
     parser = ArgumentParser(description='Downloads meetup events into text/markdown format for use in static web blogs')
 
-    parser.add_argument('--config', dest='config', 
+    parser.add_argument('--config', dest='config',
         help='read & write settings to CONFIG, default is app.cfg')
 
     # The values here get writtent to the config file
     parser.add_argument('--consumer', dest='consumer', nargs=2,
         help='set the consumer key and secret')
-    parser.add_argument('--verifier', dest='verifier', 
+    parser.add_argument('--verifier', dest='verifier',
         help='verify authorization with code from browser')
 
     # These options also can be specified in the config file events section
     parser.add_argument('-g', '--group-name', dest='group_name',
         help='group_urlname of the group to retrieve events from')
-    parser.add_argument('-f', '--name-filter', dest='name_filter', 
+    parser.add_argument('-f', '--name-filter', dest='name_filter',
         help='filter out events that match the supplied regular expression')
     parser.add_argument('-t', '--time-range', dest='time_range',
         help='return events scheduled within the given time range, defined by two times separated with a single comma.')
     parser.add_argument('-s', '--status', dest='event_status',
         help='status may be "upcoming", "past", "proposed", "suggested", "cancelled", "draft" or multiple separated by a comma.')
-    parser.add_argument('-c', '--cleanup', dest='title_cleanup', 
+    parser.add_argument('-c', '--cleanup', dest='title_cleanup',
         help='removes text matching the supplied regular expression from the title')
 
     parser.add_argument('-o', '--output-dir', dest='output_dir',
@@ -230,21 +230,21 @@ if __name__ == '__main__':
         help='enable verbose debugging')
 
     args = parser.parse_args()
-   
+
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-    
+
     config_name, config = get_config(args.config)
-   
+
     # Do the work of logging in and passing through tokens to get the interface
     mucli = get_interface(config, args)
 
     # Add a config section for configuring event retrieval if not already existing
     if not config.has_section('events'):
         config.add_section('events')
-    
+
     # Write config with any changes modifications made so far
     with open(config_name, 'wb') as c:
         config.write(c)
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 
     group_name = get_option('group_name', config, args)
     if not group_name:
-        parser.error('Must specify name of group to retireve from')
+        parser.error('Must specify name of group to retrieve from')
 
     name_filter = get_option('name_filter', config, args, default='')
     time_range = get_option('time_range', config, args, default='0,1m')

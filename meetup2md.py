@@ -154,6 +154,11 @@ def get_clean_description(event):
     # Convert elipses to three periods
     text = text.replace(u'\u2026', '...')
 
+    # Convert parenthesis
+    text = text.replace(u'\u2019', '\'')
+    text = text.replace(u'\u201c', '"')
+    text = text.replace(u'\u201d', '"')
+
     return text
 
 def write_event_page(event, stream, datetime_format='%Y-%m-%d %H:%M', logo_filename=None):

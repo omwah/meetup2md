@@ -7,13 +7,11 @@ meetup2md is a simple script that downloads events from a Meetup.com group and o
 Installing
 ==========
 
-This project uses git submodules. The modules will need to be initialized and pulled after cloning this repository.
+This project uses git submodules. We need to be initialize and pull after cloning this repository.
 
 .. sourcecode:: shell-session
 
-    $ git clone https://github.com/omwah/meetup2md.git
-    $ git submodule init
-    $ git submodule update
+    $ git submodule init && git submodule update
 
 Setting Up OAuth
 ================

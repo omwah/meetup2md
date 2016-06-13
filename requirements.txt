@@ -1,2 +1,2 @@
-argparse==1.2.1
-html2text==3.200.3
+argparse==1.4.0
+html2text==2016.5.29

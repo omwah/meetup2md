@@ -2,16 +2,22 @@
 meetup2md
 =========
 
-meetup2md is a simple script that downloads events from a Meetup.com group and outputs them in Markdown format. It requires the html2text module. It was created to make it easy to create posts for static site generator websites that mirror information from Meetup.com. The script also adds metadata from the Meetup events that can be used by the site generator for displaying event date and location.
+meetup2md is a simple script that downloads events from a Meetup.com group and outputs them in Markdown format. It was created to make it easy to create posts for static site generator websites that mirror information from Meetup.com. The script also adds metadata from the Meetup events that can be used by the site generator for displaying event date and location.
 
 Installing
 ==========
 
-This project uses git submodules. We need to be initialize and pull after cloning this repository.
+1. This project uses git submodules. We need to be initialize and pull after cloning this repository.
 
 .. sourcecode:: shell-session
 
     $ git submodule init && git submodule update
+
+2. We also need to grab a couple python packages: html2text and argparse.
+
+.. sourcecode:: shell-session
+
+    $ pip install -r requirements.txt
 
 Setting Up OAuth
 ================
